@@ -1,0 +1,246 @@
+#!/usr/bin/env bash
+
+
+
+#  stndp - v0.0.1
+#  A command line tool for doing daily stand-ups.
+#  Copyright (C) Kyle Brumm <http://kylebrumm.com>
+
+
+
+# -------------------------------------------------------
+# STNDP VARIABLES
+# -------------------------------------------------------
+
+VERSION="0.0.1"
+RED=$(tput setaf 1);
+GREEN=$(tput setaf 2);
+YELLOW=$(tput setaf 3);
+WHITE=$(tput setaf 7);
+RESET=$(tput sgr0);
+
+STNDP_INSTALL_PATH="${BASH_SOURCE[0]}"
+STNDP_INSTALL_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+STNDP_DIR="$HOME/.stndp"
+STNDP_CONFIG="$STNDP_DIR/config"
+
+
+
+# -------------------------------------------------------
+# STNDP HELPER FUNCTIONS
+# -------------------------------------------------------
+
+# Throw an error
+error() {
+    printf "${RED}Error:${WHITE} ${1}\n"
+    exit
+}
+
+# Throw a warning
+warn() {
+    printf "${YELLOW}${1}${WHITE}\n"
+}
+
+# Throw a success message
+success() {
+    printf "${GREEN}${1}${WHITE}\n"
+}
+
+# Set up the necessary config variables
+setup_project_config() {
+    # Source the project config file if it exists
+    if [ -f "$STNDP_DIR/$1" ]; then
+        source "$STNDP_DIR/$1"
+    fi
+}
+
+# Make a GET call to the API
+api_get() {
+    curl -s "https://api.airtable.com/v0/appm8UunN167VRpsT/$1?api_key=$STNDP_API_KEY$2"
+}
+
+# -------------------------------------------------------
+# STNDP COMMANDS
+# -------------------------------------------------------
+
+# CLEANUP: Remove all the config files
+stndp_cleanup() {
+    printf "This will remove all configuration files.\n"
+    read -ep "Are you sure you want to run the cleanup? (y/N): " cleanup
+    case $cleanup in
+        [Yy]* )
+            success "==> Cleanup"
+            warn "Config files removed"
+            rm -rf $STNDP_DIR
+            ;;
+        * )
+            warn "Cleanup skipped"
+            ;;
+    esac
+}
+
+# HELP: Display the help information
+stndp_help() {
+cat <<EOF
+
+stndp CLI - v${VERSION}
+
+A command line tool for doing daily stand-ups.
+
+Usage:
+    stndp <command> <options>
+
+Commands:
+    cleanup    Remove all config files
+    help       Display this help text
+    init       Initialize necessary config files
+    list       List useful stuff
+        users        Display all of the users
+        questions    Display all of the questions
+        answers      Display all of the answers
+    update     Download the latest version of stndp
+    version    Display the current version
+
+EOF
+exit;
+}
+
+# LIST: List useful things
+stndp_list() {
+    # TODO
+    # 1. Build a query string with additional arguments
+    case "$2" in
+        users)
+            query='&sortField=name'
+            response=$(api_get $2 $query)
+            echo $response | jq '.records[].fields | {(.name): {username: .username, email:.email}}'
+            ;;
+        questions)
+            response=$(api_get $2)
+            echo $response | jq '.records[].fields | .question'
+            ;;
+        answers)
+            query='&sortField=date&sortDirection=desc'
+            response=$(api_get $2 $query)
+            echo $response | jq '[.records[].fields | {user: .user_id, question: .question_id, answer:.answer, date:.date}] | group_by(.date) | reverse'
+            # Today
+            # echo $response | jq '[.records[].fields | {user: .user_id, question: .question_id, answer:.answer, date:.date}] | group_by(.date) | reverse | .[0]'
+            ;;
+        *)
+            error "Illegal list command -- $2 (see \"stndp --help\" for help)";;
+    esac
+}
+
+# INIT: Set up the project files
+stndp_init() {
+    if [ $is_setup = true ]; then
+        error "You have already run the setup task."
+    fi
+
+    success "==> Init${WHITE}"
+
+    # Create directory if it doesn't exist
+    if [ ! -d "$STNDP_DIR" ]; then
+        mkdir $STNDP_DIR
+        success "Directory created"
+    fi
+
+    # Create config file if it doesn't exist
+    if [ ! -f "$STNDP_CONFIG" ]; then
+        read -ep "STNDP_API_KEY: " api_key
+        read -ep "STNDP_USERNAME: " username
+
+        # Verify the users input
+        printf "\n"
+        printf "The following will be written to $STNDP_CONFIG:\n"
+        printf "\n"
+        printf "# stndp API Key\n"
+        printf "STNDP_API_KEY=\"$api_key\"\n"
+        printf "\n"
+        printf "# stndp Username\n"
+        printf "STNDP_USERNAME=\"$username\"\n"
+        printf "\n"
+
+        # Confirm
+        read -ep "Everything look good? (Y/n): " good_to_go
+        case $good_to_go in
+            [Nn]* )
+                warn "Config setup skipped"
+                ;;
+            * )
+                success "Config file created"
+                touch $STNDP_CONFIG
+cat > $STNDP_CONFIG <<EOF
+# stndp API Key
+STNDP_API_KEY="$api_key"
+
+# stndp Username
+STNDP_USERNAME="$username"
+EOF
+                warn "\nThe config file can be modified at \"$STNDP_CONFIG\""
+                ;;
+        esac
+    fi
+
+}
+
+# UPDATE: Update to the latest version of stndp
+stndp_update() {
+    read -ep "Are you sure you want to update stndp? (y/N): " update
+    case $update in
+        [Yy]* )
+            success "==> Update"
+            # Remove the old script
+            warn "Removing old script at \"$STNDP_INSTALL_PATH\"..."
+            rm $STNDP_INSTALL_PATH
+
+            # Download the new script
+            warn "Downloading new script to \"$STNDP_INSTALL_DIR/stndp\"..."
+            curl -s https://raw.githubusercontent.com/kjbrum/stndp/master/stndp > $STNDP_INSTALL_DIR/stndp
+            chmod +x $STNDP_INSTALL_DIR/stndp
+            ;;
+        * )
+            warn "Update Skipped"
+            ;;
+    esac
+}
+
+# VERSION: Display the current version
+stndp_version() {
+    printf "v$VERSION\n"
+}
+
+
+
+# -------------------------------------------------------
+# STNDP INITIALIZATION
+# -------------------------------------------------------
+
+# Check if help info should be displayed
+if [ "$1" = "-h" -o "$1" = "--help" -o -z "$1" ]; then
+    stndp_help;
+fi
+
+# Check if the necessary files are set up
+if [ -f "$STNDP_CONFIG" ]; then
+    is_setup=true
+
+    # Source the config file
+    source "$STNDP_CONFIG"
+else
+    is_setup=false
+
+    if [ "$1" != "init" -a "$1" != "version" ]; then
+        error "You need to run \"stndp init\" to get things set up."
+    fi
+fi
+
+# See what command we need to run
+case "$1" in
+    cleanup)      stndp_cleanup "$@";;
+    init)         stndp_init "$@";;
+    list)         stndp_list "$@";;
+    update)       stndp_update;;
+    version)      stndp_version;;
+    *)            error "Illegal command -- $1 (see \"stndp --help\" for help)";;
+esac
