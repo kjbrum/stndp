@@ -10,7 +10,7 @@ __Dependencies:__
 - [jq](https://stedolan.github.io/jq) - Used to parse the JSON responses.
 
 ```
-$ curl https://raw.githubusercontent.com/kjbrum/stndp-cli/master/stndp > ~/bin/stndp
+$ curl https://raw.githubusercontent.com/kjbrum/stndp/master/stndp > ~/bin/stndp
 $ chmod +x ~/bin/stndp
 ```
 
