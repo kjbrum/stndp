@@ -61,7 +61,7 @@ api_get() {
 
 # Make a POST call to the API
 api_post() {
-    curl -sv -XPOST "https://api.airtable.com/v0/appm8UunN167VRpsT/$1" -H "Authorization: Bearer $STNDP_API_KEY" -H "Content-type: application/json" -d "$2"
+    curl -s -X POST "https://api.airtable.com/v0/appm8UunN167VRpsT/$1" -H "Authorization: Bearer $STNDP_API_KEY" -H "Content-type: application/json" -d "$2"
 }
 
 
@@ -72,25 +72,9 @@ api_post() {
 
 # ADD: Add a record new to the database
 stndp_add() {
-    api_post "$2" "$3"
-    # case "$2" in
-    #     users)
-    #         response=$(api_post "$2" "$3")
-    #         echo $response | jq '.records[].fields | {(.name): {username: .username, email:.email}}'
-    #         ;;
-    #     questions)
-    #         response=$(api_post "$2")
-    #         echo $response | jq '.records[].fields | .question'
-    #         ;;
-    #     answers)
-    #         response=$(api_post "$2" "$3")
-    #         echo $response | jq '[.records[].fields | {user: .user_id, question: .question_id, answer:.answer, date:.date}] | group_by(.date) | reverse'
-    #         # Today
-    #         # echo $response | jq '[.records[].fields | {user: .user_id, question: .question_id, answer:.answer, date:.date}] | group_by(.date) | reverse | .[0]'
-    #         ;;
-    #     *)
-    #         error "Illegal add command -- $2 (see \"stndp --help\" for help)";;
-    # esac
+    response=$(api_post "$2" "$3")
+    success "New record added to \"$2\"!"
+    echo $response | jq
 }
 
 # CLEANUP: Remove all the config files
@@ -132,6 +116,7 @@ Commands:
         users
         questions
         answers
+    start      Start the daily stand-up prompts
     update     Download the latest version of stndp
     version    Display the current version
 
@@ -218,6 +203,16 @@ EOF
 
 }
 
+# START: Start the daily stand-up prompts
+stndp_start() {
+    response=$(api_get 'questions')
+    questions=$(echo $response | jq -r '[.records[] | .fields]')
+    echo $questions | jq
+
+    # read -ep "STNDP_API_KEY: " api_key
+    # read -ep "STNDP_USERNAME: " username
+}
+
 # UPDATE: Update to the latest version of stndp
 stndp_update() {
     read -ep "Are you sure you want to update stndp? (y/N): " update
@@ -275,6 +270,7 @@ case "$1" in
     cleanup)      stndp_cleanup "$@";;
     init)         stndp_init "$@";;
     list)         stndp_list "$@";;
+    start)        stndp_start "$@";;
     update)       stndp_update;;
     version)      stndp_version;;
     *)            error "Illegal command -- $1 (see \"stndp --help\" for help)";;

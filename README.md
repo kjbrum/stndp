@@ -37,6 +37,7 @@ Commands:
         users
         questions
         answers
+    start      Start the daily stand-up prompts
     update     Download the latest version of stndp
     version    Display the current version
 ```
@@ -55,6 +56,8 @@ Your Airtable username.
 
 ## To-Do
 
+- Add a `start` command
+    -
 
 ## License
 
