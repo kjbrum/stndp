@@ -207,10 +207,32 @@ EOF
 stndp_start() {
     response=$(api_get 'questions')
     questions=$(echo $response | jq -r '[.records[] | .fields]')
-    echo $questions | jq
+    date=$(date +%Y-%m-%d)
+    num=0
+    while [ 1 ]
+    do
+        if [[ $(echo $questions | jq -r ".[$num]") == "null" ]]; then
+            break
+        else
+            id=$(echo $questions | jq -r ".[$num].id")
+            question=$(echo $questions | jq -r ".[$num].question")
 
-    # read -ep "STNDP_API_KEY: " api_key
-    # read -ep "STNDP_USERNAME: " username
+            read -ep "$WHITE$question " answer
+
+            data='{ "fields": { "date": "'$date'", "answer": "'$answer'", "user": "'$STNDP_USERNAME'", "question_id": "'$id'" } }'
+            response=$(api_post "answers" "$data")
+
+            if echo $response | grep "error" > /dev/null 2>&1; then
+                message=$(echo $response | jq '.error.message')
+                error "$message"
+            fi
+
+            success "Answer Updated √\n"
+        fi
+
+        ((num++))
+    done
+
 }
 
 # UPDATE: Update to the latest version of stndp
