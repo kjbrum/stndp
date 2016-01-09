@@ -56,12 +56,42 @@ setup_project_config() {
 
 # Make a GET call to the API
 api_get() {
-    curl -s "https://api.airtable.com/v0/appm8UunN167VRpsT/$1?api_key=$STNDP_API_KEY$2"
+    curl -s "https://api.airtable.com/v0/appm8UunN167VRpsT/$1$2" -H "Authorization: Bearer $STNDP_API_KEY"
 }
+
+# Make a POST call to the API
+api_post() {
+    curl -sv -XPOST "https://api.airtable.com/v0/appm8UunN167VRpsT/$1" -H "Authorization: Bearer $STNDP_API_KEY" -H "Content-type: application/json" -d "$2"
+}
+
+
 
 # -------------------------------------------------------
 # STNDP COMMANDS
 # -------------------------------------------------------
+
+# ADD: Add a record new to the database
+stndp_add() {
+    api_post "$2" "$3"
+    # case "$2" in
+    #     users)
+    #         response=$(api_post "$2" "$3")
+    #         echo $response | jq '.records[].fields | {(.name): {username: .username, email:.email}}'
+    #         ;;
+    #     questions)
+    #         response=$(api_post "$2")
+    #         echo $response | jq '.records[].fields | .question'
+    #         ;;
+    #     answers)
+    #         response=$(api_post "$2" "$3")
+    #         echo $response | jq '[.records[].fields | {user: .user_id, question: .question_id, answer:.answer, date:.date}] | group_by(.date) | reverse'
+    #         # Today
+    #         # echo $response | jq '[.records[].fields | {user: .user_id, question: .question_id, answer:.answer, date:.date}] | group_by(.date) | reverse | .[0]'
+    #         ;;
+    #     *)
+    #         error "Illegal add command -- $2 (see \"stndp --help\" for help)";;
+    # esac
+}
 
 # CLEANUP: Remove all the config files
 stndp_cleanup() {
@@ -91,13 +121,17 @@ Usage:
     stndp <command> <options>
 
 Commands:
+    add        Add a new record to the database
+        users
+        questions
+        answers
     cleanup    Remove all config files
     help       Display this help text
     init       Initialize necessary config files
-    list       List useful stuff
-        users        Display all of the users
-        questions    Display all of the questions
-        answers      Display all of the answers
+    list       List records from the database
+        users
+        questions
+        answers
     update     Download the latest version of stndp
     version    Display the current version
 
@@ -111,17 +145,17 @@ stndp_list() {
     # 1. Build a query string with additional arguments
     case "$2" in
         users)
-            query='&sortField=name'
-            response=$(api_get $2 $query)
+            query='?sortField=name'
+            response=$(api_get "$2" "$query")
             echo $response | jq '.records[].fields | {(.name): {username: .username, email:.email}}'
             ;;
         questions)
-            response=$(api_get $2)
+            response=$(api_get "$2")
             echo $response | jq '.records[].fields | .question'
             ;;
         answers)
-            query='&sortField=date&sortDirection=desc'
-            response=$(api_get $2 $query)
+            query='?sortField=date&sortDirection=desc'
+            response=$(api_get "$2" "$query")
             echo $response | jq '[.records[].fields | {user: .user_id, question: .question_id, answer:.answer, date:.date}] | group_by(.date) | reverse'
             # Today
             # echo $response | jq '[.records[].fields | {user: .user_id, question: .question_id, answer:.answer, date:.date}] | group_by(.date) | reverse | .[0]'
@@ -237,6 +271,7 @@ fi
 
 # See what command we need to run
 case "$1" in
+    add)          stndp_add "$@";;
     cleanup)      stndp_cleanup "$@";;
     init)         stndp_init "$@";;
     list)         stndp_list "$@";;

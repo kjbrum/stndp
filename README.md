@@ -26,13 +26,17 @@ Usage:
     stndp <command> <options>
 
 Commands:
+    add        Add a new record to the database
+        users
+        questions
+        answers
     cleanup    Remove all config files
     help       Display this help text
     init       Initialize necessary config files
-    list       List useful stuff
-        users        Display all of the users
-        questions    Display all of the questions
-        answers      Display all of the answers
+    list       List records from the database
+        users
+        questions
+        answers
     update     Download the latest version of stndp
     version    Display the current version
 ```
