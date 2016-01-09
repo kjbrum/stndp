@@ -51,13 +51,19 @@ Your Airtable API key. [Find it here](https://airtable.com/account)
 
 #### STNDP_USERNAME
 
-Your Airtable username.
+Your team username.
 
 
 ## To-Do
 
-- Add a `start` command
-    -
+- ~~Add a `start` command~~
+    - Display past answers if the command is ran multiple times in the same day
+- Add a `status` command that lists all the teams answers for the day
+    - Options:
+        - `username`
+        - `date`
+- Add a command to post the status' to a Slack channel
+
 
 ## License
 
