@@ -68,6 +68,7 @@ Your team username.
 - Add a `slack-it` command to post the status' to a Slack channel
 - Figure out how to handle `'` in answers
 - Add autocompletion for commands
+- Add database/table schema so others can use the code
 
 
 ## License
