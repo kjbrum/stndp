@@ -143,8 +143,6 @@ stndp_list() {
             query='?sortField=date&sortDirection=desc'
             response=$(api_get "$2" "$query")
             echo $response | jq '[.records[].fields | {user: .user, question: .question_id, answer:.answer, date:.date}] | group_by(.date) | reverse'
-            # Today
-            # echo $response | jq '[.records[].fields | {user: .user, question: .question_id, answer:.answer, date:.date}] | group_by(.date) | reverse | .[0]'
             ;;
         *)
             error "Illegal list command -- $2 (see \"stndp --help\" for help)";;
@@ -207,7 +205,8 @@ EOF
 # START: Start the daily stand-up prompts
 stndp_start() {
     response=$(api_get 'questions')
-    questions=$(echo $response | jq -r '[.records[] | .fields]')
+    questions=$(echo $response | jq -r '[.records[] | .fields] | sort_by(.order)')
+
     date=$(date +%Y-%m-%d)
     num=0
     while [ 1 ]
@@ -220,7 +219,8 @@ stndp_start() {
 
             read -ep "$WHITE$question " answer
 
-            data='{ "fields": { "date": "'$date'", "answer": "'$answer'", "user": "'$STNDP_USERNAME'", "question_id": "'$id'" } }'
+            escaped_answer=$(printf "%q " $answer)
+            data='{ "fields": { "date": "'$date'", "answer": "'$escaped_answer'", "user": "'$STNDP_USERNAME'", "question_id": "'$id'" } }'
             response=$(api_post "answers" "$data")
 
             if echo $response | grep "error" > /dev/null 2>&1; then
@@ -243,7 +243,7 @@ stndp_status() {
     answers=$(echo $response | jq '[.records[].fields | {user: .user, question: .question_id, answer:.answer, date:.date} | select(.date == "'$date'")] | group_by(.question) | [.[] | sort_by(.user)]')
 
     question_response=$(api_get 'questions')
-    questions=$(echo $question_response | jq -r '[.records[] | .fields] | sort_by(.id)')
+    questions=$(echo $question_response | jq -r '[.records[] | .fields] | sort_by(.order)')
 
     num=0
     while [ 1 ]
@@ -252,8 +252,8 @@ stndp_status() {
             break
         else
             success "\n---\n"
-            printf "$YELLOW"
-            echo $questions | jq -r ".[$num].question"
+            question=$(echo $questions | jq -r ".[$num].question")
+            warn "$question"
             printf "$WHITE"
             echo $answers | jq -r '.['$num'][] | .user + ": " + .answer'
         fi

@@ -63,8 +63,11 @@ Your team username.
     - Options:
         - `--username`
         - `--date`
+- Add an `update` command for updating records
 - Add a `remove` command for deleting records
 - Add a `slack-it` command to post the status' to a Slack channel
+- Figure out how to handle `'` in answers
+- Add autocompletion for commands
 
 
 ## License
