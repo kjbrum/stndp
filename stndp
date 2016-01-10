@@ -117,7 +117,8 @@ Commands:
         questions
         answers
     start      Start the daily stand-up prompts
-    update     Download the latest version of stndp
+    status     List your teams responses for the current day
+    latest     Download the latest version of stndp
     version    Display the current version
 
 EOF
@@ -263,8 +264,8 @@ stndp_status() {
     success "\n---\n"
 }
 
-# UPDATE: Update to the latest version of stndp
-stndp_update() {
+# LATEST: Update to the latest version of stndp
+stndp_latest() {
     read -ep "Are you sure you want to update stndp? (y/N): " update
     case $update in
         [Yy]* )
@@ -322,7 +323,7 @@ case "$1" in
     list)         stndp_list "$@";;
     start)        stndp_start "$@";;
     status)       stndp_status "$@";;
-    update)       stndp_update;;
+    latest)       stndp_latest;;
     version)      stndp_version;;
     *)            error "Illegal command -- $1 (see \"stndp --help\" for help)";;
 esac
