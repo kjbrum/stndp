@@ -38,6 +38,7 @@ Commands:
         questions
         answers
     start      Start the daily stand-up prompts
+    status     List your teams responses for the current day
     update     Download the latest version of stndp
     version    Display the current version
 ```
@@ -58,10 +59,10 @@ Your team username.
 
 - ~~Add a `start` command~~
     - Display past answers if the command is ran multiple times in the same day
-- Add a `status` command that lists all the teams answers for the day
+- ~~Add a `status` command that lists all the teams answers for the day~~
     - Options:
-        - `username`
-        - `date`
+        - `--username`
+        - `--date`
 - Add a command to post the status' to a Slack channel
 
 

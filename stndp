@@ -141,9 +141,9 @@ stndp_list() {
         answers)
             query='?sortField=date&sortDirection=desc'
             response=$(api_get "$2" "$query")
-            echo $response | jq '[.records[].fields | {user: .user_id, question: .question_id, answer:.answer, date:.date}] | group_by(.date) | reverse'
+            echo $response | jq '[.records[].fields | {user: .user, question: .question_id, answer:.answer, date:.date}] | group_by(.date) | reverse'
             # Today
-            # echo $response | jq '[.records[].fields | {user: .user_id, question: .question_id, answer:.answer, date:.date}] | group_by(.date) | reverse | .[0]'
+            # echo $response | jq '[.records[].fields | {user: .user, question: .question_id, answer:.answer, date:.date}] | group_by(.date) | reverse | .[0]'
             ;;
         *)
             error "Illegal list command -- $2 (see \"stndp --help\" for help)";;
@@ -232,7 +232,35 @@ stndp_start() {
 
         ((num++))
     done
+}
 
+# STATUS: List your teams responses for the current day
+stndp_status() {
+    query='?sortField=date&sortDirection=desc'
+    response=$(api_get "answers" "$query")
+    date=$(date +%Y-%m-%d)
+    answers=$(echo $response | jq '[.records[].fields | {user: .user, question: .question_id, answer:.answer, date:.date} | select(.date == "'$date'")] | group_by(.question) | [.[] | sort_by(.user)]')
+
+    question_response=$(api_get 'questions')
+    questions=$(echo $question_response | jq -r '[.records[] | .fields] | sort_by(.id)')
+
+    num=0
+    while [ 1 ]
+    do
+        if [[ $(echo $questions | jq -r ".[$num]") == "null" ]]; then
+            break
+        else
+            success "\n---\n"
+            printf "$YELLOW"
+            echo $questions | jq -r ".[$num].question"
+            printf "$WHITE"
+            echo $answers | jq -r '.['$num'][] | .user + ": " + .answer'
+        fi
+
+        ((num++))
+    done
+
+    success "\n---\n"
 }
 
 # UPDATE: Update to the latest version of stndp
@@ -293,6 +321,7 @@ case "$1" in
     init)         stndp_init "$@";;
     list)         stndp_list "$@";;
     start)        stndp_start "$@";;
+    status)       stndp_status "$@";;
     update)       stndp_update;;
     version)      stndp_version;;
     *)            error "Illegal command -- $1 (see \"stndp --help\" for help)";;
