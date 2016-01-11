@@ -60,6 +60,7 @@ Your team username.
 - ~~Add a `start` command~~
     - Ask the user if they want to re-answer the questions if the command is ran multiple times in the same day
 - ~~Add a `status` command that lists all the teams answers for the day~~
+    - Handle returning an empty object (if nobody has update their status for the day yet)
     - Options:
         - `--username`
         - `--date`
