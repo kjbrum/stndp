@@ -207,11 +207,11 @@ stndp_start() {
     response=$(api_get 'questions')
     questions=$(echo $response | jq -r '[.records[] | .fields] | sort_by(.order)')
 
-    date=$(date +%Y-%m-%d)
+    date=$(date +%F)
     num=0
     while [ 1 ]
     do
-        if [[ $(echo $questions | jq -r ".[$num]") == "null" ]]; then
+        if [[ $(echo $questions | jq -r ".[$num]") = "null" ]]; then
             break
         else
             id=$(echo $questions | jq -r ".[$num].id")
@@ -239,29 +239,33 @@ stndp_start() {
 stndp_status() {
     query='?sortField=date&sortDirection=desc'
     response=$(api_get "answers" "$query")
-    date=$(date +%Y-%m-%d)
+    date=$(date +%F)
     answers=$(echo $response | jq '[.records[].fields | {user: .user, question: .question_id, answer:.answer, date:.date} | select(.date == "'$date'")] | group_by(.question) | [.[] | sort_by(.user)]')
 
     question_response=$(api_get 'questions')
     questions=$(echo $question_response | jq -r '[.records[] | .fields] | sort_by(.order)')
 
-    num=0
-    while [ 1 ]
-    do
-        if [[ $(echo $questions | jq -r ".[$num]") == "null" ]]; then
-            break
-        else
-            success "\n---\n"
-            question=$(echo $questions | jq -r ".[$num].question")
-            warn "$question"
-            printf "$WHITE"
-            echo $answers | jq -r '.['$num'][] | .user + ": " + .answer'
-        fi
+    if [ ${#answers[@]} = 0 ]; then
+        num=0
+        while [ 1 ]
+        do
+            if [[ $(echo $questions | jq -r ".[$num]") == "null" ]]; then
+                break
+            else
+                success "\n---\n"
+                question=$(echo $questions | jq -r ".[$num].question")
+                warn "$question"
+                printf "$WHITE"
+                echo $answers | jq -r '.['$num'][] | .user + ": " + .answer'
+            fi
 
-        ((num++))
-    done
+            ((num++))
+        done
 
-    success "\n---\n"
+        success "\n---\n"
+    else
+        warn "No statuses to show...\n"
+    fi
 }
 
 # LATEST: Update to the latest version of stndp
