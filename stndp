@@ -33,7 +33,7 @@ STNDP_CONFIG="$STNDP_DIR/config"
 # Throw an error
 error() {
     printf "${RED}Error:${WHITE} ${1}\n"
-    exit
+    exit 1
 }
 
 # Throw a warning
@@ -72,7 +72,7 @@ api_post() {
 
 # ADD: Add a record new to the database
 stndp_add() {
-    response=$(api_post "$2" "$3")
+    local response=$(api_post "$2" "$3")
     success "New record added to \"$2\"!"
     echo $response | jq
 }
@@ -131,17 +131,17 @@ stndp_list() {
     # 1. Build a query string with additional arguments
     case "$2" in
         users)
-            query='?sortField=name'
-            response=$(api_get "$2" "$query")
+            local query='?sortField=name'
+            local response=$(api_get "$2" "$query")
             echo $response | jq '.records[].fields | {(.name): {username: .username, email:.email}}'
             ;;
         questions)
-            response=$(api_get "$2")
+            local response=$(api_get "$2")
             echo $response | jq '.records[].fields | .question'
             ;;
         answers)
-            query='?sortField=date&sortDirection=desc'
-            response=$(api_get "$2" "$query")
+            local query='?sortField=date&sortDirection=desc'
+            local response=$(api_get "$2" "$query")
             echo $response | jq '[.records[].fields | {user: .user, question: .question_id, answer:.answer, date:.date}] | group_by(.date) | reverse'
             ;;
         *)
@@ -204,27 +204,27 @@ EOF
 
 # START: Start the daily stand-up prompts
 stndp_start() {
-    response=$(api_get 'questions')
-    questions=$(echo $response | jq -r '[.records[] | .fields] | sort_by(.order)')
+    local response=$(api_get 'questions')
+    local questions=$(echo $response | jq -r '[.records[] | .fields] | sort_by(.order)')
 
-    date=$(date +%F)
-    num=0
+    local date=$(date +%F)
+    local num=0
     while [ 1 ]
     do
         if [[ $(echo $questions | jq -r ".[$num]") = "null" ]]; then
             break
         else
-            id=$(echo $questions | jq -r ".[$num].id")
-            question=$(echo $questions | jq -r ".[$num].question")
+            local id=$(echo $questions | jq -r ".[$num].id")
+            local question=$(echo $questions | jq -r ".[$num].question")
 
             read -ep "$WHITE$question " answer
 
-            escaped_answer=$(printf "%q " $answer)
-            data='{ "fields": { "date": "'$date'", "answer": "'$escaped_answer'", "user": "'$STNDP_USERNAME'", "question_id": "'$id'" } }'
-            response=$(api_post "answers" "$data")
+            local escaped_answer=$(printf "%q " $answer)
+            local data='{ "fields": { "date": "'$date'", "answer": "'$escaped_answer'", "user": "'$STNDP_USERNAME'", "question_id": "'$id'" } }'
+            local response=$(api_post "answers" "$data")
 
             if echo $response | grep "error" > /dev/null 2>&1; then
-                message=$(echo $response | jq '.error.message')
+                local message=$(echo $response | jq '.error.message')
                 error "$message"
             fi
 
@@ -237,23 +237,23 @@ stndp_start() {
 
 # STATUS: List your teams responses for the current day
 stndp_status() {
-    query='?sortField=date&sortDirection=desc'
-    response=$(api_get "answers" "$query")
-    date=$(date +%F)
-    answers=$(echo $response | jq '[.records[].fields | {user: .user, question: .question_id, answer:.answer, date:.date} | select(.date == "'$date'")] | group_by(.question) | [.[] | sort_by(.user)]')
+    local query='?sortField=date&sortDirection=desc'
+    local response=$(api_get "answers" "$query")
+    local date=$(date +%F)
+    local answers=$(echo $response | jq '[.records[].fields | {user: .user, question: .question_id, answer:.answer, date:.date} | select(.date == "'$date'")] | group_by(.question) | [.[] | sort_by(.user)]')
 
-    question_response=$(api_get 'questions')
-    questions=$(echo $question_response | jq -r '[.records[] | .fields] | sort_by(.order)')
+    local question_response=$(api_get 'questions')
+    local questions=$(echo $question_response | jq -r '[.records[] | .fields] | sort_by(.order)')
 
     if [ ${#answers[@]} = 0 ]; then
-        num=0
+        local num=0
         while [ 1 ]
         do
             if [[ $(echo $questions | jq -r ".[$num]") == "null" ]]; then
                 break
             else
                 success "\n---\n"
-                question=$(echo $questions | jq -r ".[$num].question")
+                local question=$(echo $questions | jq -r ".[$num].question")
                 warn "$question"
                 printf "$WHITE"
                 echo $answers | jq -r '.['$num'][] | .user + ": " + .answer'
