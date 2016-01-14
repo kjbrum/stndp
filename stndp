@@ -333,3 +333,5 @@ case "$1" in
     version)      stndp_version;;
     *)            error "Illegal command -- $1 (see \"stndp --help\" for help)";;
 esac
+
+exit 0
