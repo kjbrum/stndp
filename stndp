@@ -23,6 +23,7 @@ STNDP_INSTALL_PATH="${BASH_SOURCE[0]}"
 STNDP_INSTALL_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 STNDP_DIR="$HOME/.stndp"
 STNDP_CONFIG="$STNDP_DIR/config"
+DATE=$(date +%F)
 
 
 
@@ -128,20 +129,21 @@ exit;
 # LIST: List useful things
 stndp_list() {
     # TODO
-    # 1. Build a query string with additional arguments
+    # 1. Build a query string with synadditional arguments
+    local query response
     case "$2" in
         users)
-            local query='?sortField=name'
-            local response=$(api_get "$2" "$query")
+            query='?sortField=name'
+            response=$(api_get "$2" "$query")
             echo $response | jq '.records[].fields | {(.name): {username: .username, email:.email}}'
             ;;
         questions)
-            local response=$(api_get "$2")
+            response=$(api_get "$2")
             echo $response | jq '.records[].fields | .question'
             ;;
         answers)
-            local query='?sortField=date&sortDirection=desc'
-            local response=$(api_get "$2" "$query")
+            query='?sortField=date&sortDirection=desc'
+            response=$(api_get "$2" "$query")
             echo $response | jq '[.records[].fields | {user: .user, question: .question_id, answer:.answer, date:.date}] | group_by(.date) | reverse'
             ;;
         *)
@@ -151,7 +153,7 @@ stndp_list() {
 
 # INIT: Set up the project files
 stndp_init() {
-    if [ $is_setup = true ]; then
+    if [ $IS_SETUP = true ]; then
         error "You have already run the setup task."
     fi
 
@@ -204,27 +206,27 @@ EOF
 
 # START: Start the daily stand-up prompts
 stndp_start() {
-    local response=$(api_get 'questions')
-    local questions=$(echo $response | jq -r '[.records[] | .fields] | sort_by(.order)')
+    local response questions num id question escaped_answer data message
+    response=$(api_get 'questions')
+    questions=$(echo $response | jq -r '[.records[] | .fields] | sort_by(.order)')
 
-    local date=$(date +%F)
-    local num=0
+    num=0
     while [ 1 ]
     do
         if [[ $(echo $questions | jq -r ".[$num]") = "null" ]]; then
             break
         else
-            local id=$(echo $questions | jq -r ".[$num].id")
-            local question=$(echo $questions | jq -r ".[$num].question")
+            id=$(echo $questions | jq -r ".[$num].id")
+            question=$(echo $questions | jq -r ".[$num].question")
 
             read -ep "$WHITE$question " answer
 
-            local escaped_answer=$(printf "%q " $answer)
-            local data='{ "fields": { "date": "'$date'", "answer": "'$escaped_answer'", "user": "'$STNDP_USERNAME'", "question_id": "'$id'" } }'
-            local response=$(api_post "answers" "$data")
+            escaped_answer=$(printf "%q " $answer)
+            data='{ "fields": { "date": "'$DATE'", "answer": "'$escaped_answer'", "user": "'$STNDP_USERNAME'", "question_id": "'$id'" } }'
+            response=$(api_post "answers" "$data")
 
             if echo $response | grep "error" > /dev/null 2>&1; then
-                local message=$(echo $response | jq '.error.message')
+                message=$(echo $response | jq '.error.message')
                 error "$message"
             fi
 
@@ -237,23 +239,23 @@ stndp_start() {
 
 # STATUS: List your teams responses for the current day
 stndp_status() {
-    local query='?sortField=date&sortDirection=desc'
-    local response=$(api_get "answers" "$query")
-    local date=$(date +%F)
-    local answers=$(echo $response | jq '[.records[].fields | {user: .user, question: .question_id, answer:.answer, date:.date} | select(.date == "'$date'")] | group_by(.question) | [.[] | sort_by(.user)]')
+    local query response answers question_response questions num question
+    query='?sortField=date&sortDirection=desc'
+    response=$(api_get "answers" "$query")
+    answers=$(echo $response | jq '[.records[].fields | {user: .user, question: .question_id, answer:.answer, date:.date} | select(.date == "'$DATE'")] | group_by(.question) | [.[] | sort_by(.user)]')
 
-    local question_response=$(api_get 'questions')
-    local questions=$(echo $question_response | jq -r '[.records[] | .fields] | sort_by(.order)')
+    question_response=$(api_get 'questions')
+    questions=$(echo $question_response | jq -r '[.records[] | .fields] | sort_by(.order)')
 
     if [ ${#answers[@]} = 0 ]; then
-        local num=0
+        num=0
         while [ 1 ]
         do
             if [[ $(echo $questions | jq -r ".[$num]") == "null" ]]; then
                 break
             else
                 success "\n---\n"
-                local question=$(echo $questions | jq -r ".[$num].question")
+                question=$(echo $questions | jq -r ".[$num].question")
                 warn "$question"
                 printf "$WHITE"
                 echo $answers | jq -r '.['$num'][] | .user + ": " + .answer'
@@ -307,12 +309,12 @@ fi
 
 # Check if the necessary files are set up
 if [ -f "$STNDP_CONFIG" ]; then
-    is_setup=true
+    IS_SETUP=true
 
     # Source the config file
     source "$STNDP_CONFIG"
 else
-    is_setup=false
+    IS_SETUP=false
 
     if [ "$1" != "init" -a "$1" != "version" ]; then
         error "You need to run \"stndp init\" to get things set up."
